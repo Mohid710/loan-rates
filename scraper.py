@@ -1,54 +1,56 @@
-import requests
-from bs4 import BeautifulSoup
-import json
-from datetime import datetime
+# scraper.py
+# Loan Calculator Module for Conventional and Islamic Banks
 
-def get_sbp_kibor_rate():
-    url = "https://www.sbp.org.pk/ecodata/Kibor.asp"
-    response = requests.get(url)
-    soup = BeautifulSoup(response.text, "html.parser")
+def conventional_loan(principal, annual_rate, months):
+    """
+    Calculates EMI and total interest for conventional bank (reducing balance method)
+    """
+    r = annual_rate / 100 / 12  # monthly interest rate
+    emi = principal * r * (1 + r)**months / ((1 + r)**months - 1)
+    total_payment = emi * months
+    total_interest = total_payment - principal
+    return round(emi, 2), round(total_interest, 2)
 
-    kibor = None
-    for td in soup.find_all("td"):
-        if "%" in td.text:
-            kibor = td.text.strip().replace("%", "")
-            break
 
-    sbp_base_rate = 20.5  # You can scrape this from SBP's policy page if needed
-    return float(sbp_base_rate), float(kibor)
+def islamic_loan(principal, annual_rate, months, method='flat'):
+    """
+    Calculates EMI and total profit for Islamic bank
+    method: 'flat' or 'diminishing'
+    """
+    years = months / 12
+    if method == 'flat':
+        total_profit = principal * annual_rate / 100 * years
+        emi = (principal + total_profit) / months
+    elif method == 'diminishing':
+        # monthly reducing balance method
+        r = annual_rate / 100 / 12
+        emi = principal * r * (1 + r)**months / ((1 + r)**months - 1)
+        total_payment = emi * months
+        total_profit = total_payment - principal
+    else:
+        raise ValueError("Invalid method: choose 'flat' or 'diminishing'")
+    
+    return round(emi, 2), round(total_profit, 2)
 
-def get_meezan_murabaha_rate():
-    url = "https://www.meezanbank.com/easy-home/"
-    response = requests.get(url)
-    soup = BeautifulSoup(response.text, "html.parser")
 
-    murabaha_rate = None
-    for strong in soup.find_all("strong"):
-        if "%" in strong.text:
-            murabaha_rate = strong.text.strip().replace("%", "")
-            break
-
-    return float(murabaha_rate) if murabaha_rate else 13.5
-
-def save_rates():
-    sbp_base_rate, kibor_rate = get_sbp_kibor_rate()
-    murabaha_rate = get_meezan_murabaha_rate()
-
-    data = {
-        "updated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "conventional_loans": {
-            "sbp_base_rate": sbp_base_rate,
-            "kibor_rate": kibor_rate
-        },
-        "islamic_loans": {
-            "murabaha_rate": murabaha_rate
-        }
-    }
-
-    with open("rates.json", "w") as f:
-        json.dump(data, f, indent=4)
-
-    print("✅ rates.json updated successfully!")
-
+# --------------------------
+# Example Usage (for testing)
+# --------------------------
 if __name__ == "__main__":
-    save_rates()
+    principal = 100000           # Loan amount
+    months = 12                  # Loan tenure in months
+
+    # Conventional Bank
+    emi_conv, total_interest = conventional_loan(principal, 12, months)
+    print("Conventional Bank Loan:")
+    print(f"Monthly EMI: {emi_conv} | Total Interest: {total_interest}")
+
+    # Islamic Bank - Flat Rate
+    emi_flat, total_profit_flat = islamic_loan(principal, 10, months, method='flat')
+    print("\nIslamic Bank Loan (Flat Rate):")
+    print(f"Monthly EMI: {emi_flat} | Total Profit: {total_profit_flat}")
+
+    # Islamic Bank - Diminishing Balance
+    emi_dim, total_profit_dim = islamic_loan(principal, 10, months, method='diminishing')
+    print("\nIslamic Bank Loan (Diminishing Balance):")
+    print(f"Monthly EMI: {emi_dim} | Total Profit: {total_profit_dim}")
