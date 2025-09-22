@@ -1,0 +1,10 @@
+{
+  "updated_at": "2025-09-19 18:00:00",
+  "conventional_loans": {
+    "sbp_base_rate": 20.5,
+    "kibor_rate": 21.75
+  },
+  "islamic_loans": {
+    "murabaha_rate": 13.5
+  }
+}
